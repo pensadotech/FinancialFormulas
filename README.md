@@ -30,15 +30,15 @@ The project also integrates **Swagger** for API documentation and **API versioni
 
 ```text
 ┌──────────────────────┐      HTTP / JSON / XML      ┌────────────────────────────┐
-│ Client / Consumer    │ ───────────────────────────► │ ASP.NET Core API          │
-│ Postman / Web App    │                            │ FinancialController        │
-└──────────────────────┘                            │ /api/v{version}/financial │
+│ Client / Consumer    │ ──────────────────────────► │ ASP.NET Core API           │
+│ Postman / Web App    │                             │ FinancialController        │
+└──────────────────────┘                             │ /api/v{version}/financial  │
                                                      └──────────────┬─────────────┘
                                                                     │
                                                                     ▼
                                                      ┌────────────────────────────┐
                                                      │ FinancialService           │
-                                                     │ Executes PTI and LTV      │
+                                                     │ Executes PTI and LTV       │
                                                      │ formula calculations       │
                                                      └──────────────┬─────────────┘
                                                                     │
