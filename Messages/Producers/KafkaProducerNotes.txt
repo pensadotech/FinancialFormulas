@@ -1,0 +1,145 @@
+﻿Kafka Producer key ideas
+===============================
+
+Kakfka message
+--------------
+A Kakfka message fundamental structure include a Key and a Value.
+For the Key us primitive elements.
+For thr Value can be from primitive to complex objects
+
+var message = new message<string,Biometrics>  
+	{
+		Key = biometrics.DeviceId,
+		Value = biometrics
+	}
+
+Important pieces
+-------------------
+
+The following steps represent a summary of pieces.
+
+STEP 1: CONFIGURATION
+STEP 2: SCHEMA REGISTRY
+STEP 3: CREATE A PRODUCER
+STEP 4: CREATE A MESSAGE AND PUBLISH IT
+
+
+Important pieces general ideas
+-------------------------------
+ Important: This section is just a guide and provide a general idea of 
+ the pieces at play. Consider looking into the code to understand all 
+ small details needed.
+
+STEP 1: CONFIGURATION 
+
+    * Define the configuration inside then appConfig.json
+
+      // appConfig.json 
+    	{
+	      "Kafka": {
+		  "BootstrapServers" : "localhost1:9092" ,
+		  "ClientId" : "MyClient",           
+		  "SecurityProtocol" : "SaslSsl",
+		  "SaslMechanism" : "PLAIN",
+		  "SaslUsrname" : "username",
+		  "SaslPassword" : "password"
+	    }
+
+    *  Retreive configuration using IOptions
+	  
+	    Note: There are severl wasy to do this, the preferred one is using IOptions
+
+	    ** define a class to hold the config options (e.g. KafkaMessagingOptions)
+
+	    ** Add to services the configuration binding to the class (e.g. KafkaMessagingOptions)
+
+	        for example inside the KafkaMessagingServiceExtensions class 
+	            Note: this can have validations
+	     
+		     services.AddOptions<KafkaMessagingOptions>()
+                 .Bind(configuration.GetSection(KafkaMessagingOptions.SectionName));
+
+        ** Create a Producer Configuration 
+		   
+		   From the producer, pass the configuration as a paramete IOptions.
+	       for example:
+		     
+			   private readonly KafkaMessagingOptions _options;
+
+		       public FormulaResponseProducer(
+                   IOptions<KafkaMessagingOptions> options,  <<<----
+                   IAvroSchemaProvider schemaProvider,
+                   ISchemaRegistryClient schemaRegistryClient)
+		        {
+			      _options = options.Value;
+
+				   var producetConfig = new ProducerConfig
+                   {
+                     BootstrapServers = _options.BootstrapServers,
+                     Acks = Acks.All,
+                     EnableIdempotence = true,
+                     MessageSendMaxRetries = 3,
+                     RetryBackoffMs = 1000
+                   };
+		        }
+
+STEP 2: SCHEMA REGISTRY
+
+     * Create a Kafka Schema Registry (Cached Schem Registry is preferable)
+	
+	    Note: Any settinsg will be better comming from the configuration settings
+
+	    For example inisde the  KafkaMessagingServiceExtensions class create a ISchemaRegistryClient
+	     
+		 services.AddSingleton<ISchemaRegistryClient>(serviceProvider =>
+         {
+            var options = serviceProvider.GetRequiredService<IOptions<KafkaMessagingOptions>>().Value;
+
+            // here more specific configuration can be added if needed, such as authentication or other settings
+            return new CachedSchemaRegistryClient(new SchemaRegistryConfig
+            {
+                Url = options.SchemaRegistryUrl
+            });
+         });
+
+      * Retrive it from the producer constructor as a parameter
+
+	   public FormulaResponseProducer(
+           IOptions<KafkaMessagingOptions> options,
+           IAvroSchemaProvider schemaProvider,
+           ISchemaRegistryClient schemaRegistryClient)  <<<<----
+		   {
+
+		   }
+
+
+STEP 3: CREATE A PRODUCER
+ 
+      * Create a Producer instance using the configuration and the schema registry client
+	    using the proper serialization type (e.g. Avro, Json,Ptoobuff, ...)
+
+        // Build the Kafka producer using the ProducerBuilder,
+        // specifying the key and value types (string and GenericRecord).
+        _producer = new ProducerBuilder<string, GenericRecord>(producetConfig)
+                       .SetValueSerializer(new AvroSerializer<GenericRecord>(schemaRegistryClient))
+                       .Build();
+
+
+STEP 4: CREATE A MESSAGE AND PUBLISH IT
+     
+	 * Create a message and preapre for teh message type
+
+	    var responseRecord = AvroFormulaRequestMapper
+		                       .Map(response, _schemaProvider.FormulaResponseSchema);
+
+        var message = new Message<string, GenericRecord>
+        {
+            Key = ProducerMessageKey,
+            Value = responseRecord,
+            Headers = headers
+        };
+
+
+	 *    Send message to a topic and wait
+
+	      await _producer.ProduceAsync(_options.ResponseTopic, message, cancellationToken);

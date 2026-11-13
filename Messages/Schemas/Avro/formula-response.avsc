@@ -1,0 +1,45 @@
+{
+  "type": "record",
+  "name": "FormulaBacthResponseMessage",
+  "namespace": "FinancialFormulas.Messages.Avro",
+  "fields": [
+    {
+      "name": "responses",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "FormulaResponseItem",
+          "fields": [
+            {"name": "calculationId","type": "string"},
+            {
+              "name": "formulaName",
+              "type": "string"
+            },
+            {
+              "name": "formulaVersion",
+              "type": "string"
+            },
+            {
+              "name": "result",
+              "type": [ "null", "double" ]
+            },
+            {
+              "name": "Error",
+              "type": [
+                "null",
+                {
+                  "type": "record",
+                  "name": "FormulaErrorItem",
+                  "fields": [
+                    {"name": "reason", "type": "string"}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

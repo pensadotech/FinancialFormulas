@@ -1,0 +1,34 @@
+{
+  "Formulas": [
+    {
+      "calculationId": "pti-primary",
+      "formulaName": "PTI",
+      "formulaVersion": "1.0",
+      "parameters": [
+        {
+          "parameterName": "monthlyPayment",
+          "value": 725.5
+        },
+        {
+          "parameterName": "grossMonthlyIncome",
+          "value": 6250.0
+        }
+      ]
+    },
+    {
+      "calculationId": "ltv-primary",
+      "formulaName": "LTV",
+      "formulaVersion": "1.0",
+      "parameters": [
+        {
+          "parameterName": "loanAmount",
+          "value": 25000.5
+        },
+        {
+          "parameterName": "PropertyValue",
+          "value": 312500.0
+        }
+      ]
+    }
+  ]
+}

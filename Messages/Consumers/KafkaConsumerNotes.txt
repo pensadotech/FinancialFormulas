@@ -1,0 +1,186 @@
+﻿
+
+Kafka consumer key ideas
+==============================
+
+Kakfka message
+--------------
+A Kakfka message fundamental structure include a Key and a Value.
+For the Key us primitive elements.
+For thr Value can be from primitive to complex objects
+
+var message = new message<string,Biometrics>  
+	{
+		Key = biometrics.DeviceId,
+		Value = biometrics
+	}
+
+Important pieces
+-------------------
+
+The following steps represent a summary of pieces.
+
+STEP 1: CREATE A BACKGROUND SERVICE
+STEP 2: CONFIGURATION
+STEP 3: CREATE A PRODUCER
+STEP 4: CONSUME MESSAGES AND USE THEM
+
+
+Important pieces general ideas
+-------------------------------
+ Important: This section is just a guide and provide a general idea of 
+ the pieces at play. Consider looking into the code to understand all 
+ small details needed.
+
+ STEP 1: CREATE A BACKGROUND SERVICE
+
+    * Create a background service that will run the consumer loop
+    * Inside the ExecuteAsync method, create a consumer and subscribe to the topic
+    * Inside the loop, consume messages and process them
+    * Handle exceptions and commit offsets as needed
+
+    For example 
+
+     public class FormulaRequestConsumer : BackgroundService
+     {
+        public FormulaRequestConsumer()
+        {
+          // prepare elements needed here
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken) 
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                // read messages here   
+            }
+     }
+
+ STEP 2: CONFIGURATION 
+
+    * Define the configuration inside then appConfig.json
+
+      // appConfig.json 
+    	{
+	      "Kafka": {
+		  "BootstrapServers" : "localhost1:9092" ,
+		  "ClientId" : "MyClient",           
+		  "SecurityProtocol" : "SaslSsl",
+		  "SaslMechanism" : "PLAIN",
+		  "SaslUsrname" : "username",
+		  "SaslPassword" : "password"
+	    }
+
+    *  Retreive configuration using IOptions
+	  
+	    Note: There are severl wasy to do this, the preferred one is using IOptions
+
+	    ** define a class to hold the config options (e.g. KafkaMessagingOptions)
+
+	    ** Add to services the configuration binding to the class (e.g. KafkaMessagingOptions)
+
+	        for example inside the KafkaMessagingServiceExtensions class 
+	            Note: this can have validations
+	     
+		     services.AddOptions<KafkaMessagingOptions>()
+                 .Bind(configuration.GetSection(KafkaMessagingOptions.SectionName));
+
+        ** Create a Producer Configuration 
+		   
+		   From the producer, pass the configuration as a paramete IOptions.
+	       for example:
+		     
+			   private readonly KafkaMessagingOptions _options;
+
+		       public FormulaRequestConsumer(
+                    IOptions<KafkaMessagingOptions> options,   //  IOptions
+                    IServiceScopeFactory scopeFactory,
+                    IFormulaResponseProducer responseProducer,
+                    ISchemaRegistryClient schemaregistryClient,
+                    ILogger<FormulaRequestConsumer> logger)
+               {
+                 _options = options.Value;
+                 _scopeFactory = scopeFactory;
+                 _responseProducer = responseProducer;
+                 _logger = logger;
+                         
+                 var consumerConfig = new ConsumerConfig
+                 {
+                   BootstrapServers = _options.BootstrapServers,
+                   GroupId = _options.ConsumerGroupId,
+                   AutoOffsetReset = ParseAutoOffsetReset(_options.AutoOffsetReset),
+                   EnableAutoCommit = false  // Disable auto-commit to manage offsets manually
+                 };
+               
+               }
+
+STEP 3: CREATE A CONSUMER
+
+        * Define a serializer for the message value (e.g. AvroSerializer<T>) 
+          inside the constructor
+
+            _avroDeserializer = new AvroDeserializer<GenericRecord>(schemaregistryClient);
+
+        * Create a consumer inside the constructor
+
+            _consumer = new ConsumerBuilder<string, byte[]>(consumerConfig).Build();
+
+        * Complete idea is as follows
+
+            private readonly KafkaMessagingOptions _options;
+
+		       public FormulaRequestConsumer(
+                    IOptions<KafkaMessagingOptions> options,   //  IOptions
+                    IServiceScopeFactory scopeFactory,
+                    IFormulaResponseProducer responseProducer,
+                    ISchemaRegistryClient schemaregistryClient,
+                    ILogger<FormulaRequestConsumer> logger)
+               {
+                 _options = options.Value;
+                 _scopeFactory = scopeFactory;
+                 _responseProducer = responseProducer;
+                 _logger = logger;
+                 
+                 _avroDeserializer = new AvroDeserializer<GenericRecord>(schemaregistryClient);
+
+                 var consumerConfig = new ConsumerConfig
+                 {
+                   BootstrapServers = _options.BootstrapServers,
+                   GroupId = _options.ConsumerGroupId,
+                   AutoOffsetReset = ParseAutoOffsetReset(_options.AutoOffsetReset),
+                   EnableAutoCommit = false  // Disable auto-commit to manage offsets manually
+                 };
+                 
+                 _consumer = new ConsumerBuilder<string, byte[]>(consumerConfig).Build();
+
+               }
+
+STEP 4: CONSUME MESSAGES AND USE THEM
+
+     * Subscribe to the topic 
+
+        _consumer.Subscribe(_options.RequestTopic);
+
+    * Use a loop to listen to any messages associated with the topic
+      deserialize and convert to DTO Model classes
+
+       while (!stoppingToken.IsCancellationRequested)
+       {
+           // Consume a message from the request topic
+           var consumeResult = _consumer.Consume(stoppingToken);
+
+           // Deserialize the avro message to a GenericREcord
+           var message = await _avroDeserializer.DeserializeAsync(
+                    consumeResult.Message.Value, 
+                    false, 
+                    new SerializationContext(MessageComponentType.Value, 
+                                              consumeResult.Topic, 
+                                              consumeResult.Message.Headers));
+
+           // Convert teh Avro GenericREcord to a FormulaRequest object
+           var formulaRequest = AvroFormulaRequestMapper.Map(message);
+
+           // Do something with teh message
+           // For example, execute formulas and respond through the producer
+
+       }

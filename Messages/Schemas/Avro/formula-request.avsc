@@ -1,0 +1,36 @@
+{
+  "type": "record",
+  "name": "FormulaRequestMessage",
+  "namespace": "FinancialFormulas.Messages.Avro",
+  "fields": [
+    {
+      "name": "formulas",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "FormulaItem",
+          "fields": [
+            { "name": "calculationId", "type": "string" },
+            { "name": "formulaName", "type": "string" },
+            { "name": "formulaVersion", "type": "string" },
+            {
+              "name": "parameters",
+              "type": {
+                "type": "array",
+                "items": {
+                  "type": "record",
+                  "name": "FormulaParameterItem",
+                  "fields": [
+                    { "name": "parameterName", "type": "string" },
+                    {"name": "value", "type": [ "null", "double","string","int","long","boolean" ] }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

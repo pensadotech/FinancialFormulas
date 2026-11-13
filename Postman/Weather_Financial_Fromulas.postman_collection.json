@@ -1,0 +1,65 @@
+{
+  "info": {
+    "_postman_id": "b42f7e71-2067-4028-bdb4-726ad99a12c7",
+    "name": "Weather_Financial_Fromulas",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "5217939"
+  },
+  "item": [
+    {
+      "name": "Weather Request",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": " application/json"
+          }
+        ],
+        "url": {
+          "raw": "https://localhost:7024/WeatherForecast",
+          "protocol": "https",
+          "host": [
+            "localhost"
+          ],
+          "port": "7024",
+          "path": [
+            "WeatherForecast"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "New Request",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"Formulas\": [\r\n    {\r\n      \"calculationId\": \"pti-primary\",\r\n      \"formulaName\": \"PTI\",\r\n      \"formulaVersion\": \"1.0\",\r\n      \"parameters\": [\r\n        {\r\n          \"parameterName\": \"monthlyPayment\",\r\n          \"value\": 725.5\r\n        },\r\n        {\r\n          \"parameterName\": \"grossMonthlyIncome\",\r\n          \"value\": 6250.0\r\n        }\r\n      ]\r\n    },\r\n    {\r\n      \"calculationId\": \"ltv-primary\",\r\n      \"formulaName\": \"LTV\",\r\n      \"formulaVersion\": \"1.0\",\r\n      \"parameters\": [\r\n        {\r\n          \"parameterName\": \"loanAmount\",\r\n          \"value\": 25000.5\r\n        },\r\n        {\r\n          \"parameterName\": \"PropertyValue\",\r\n          \"value\": 312500.0\r\n        }\r\n      ]\r\n    }\r\n  ]\r\n}\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://localhost:7024/api/v1/Financial/formulas",
+          "protocol": "https",
+          "host": [
+            "localhost"
+          ],
+          "port": "7024",
+          "path": [
+            "api",
+            "v1",
+            "Financial",
+            "formulas"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
