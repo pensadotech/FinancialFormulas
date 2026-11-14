@@ -1,9 +1,9 @@
-
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using FinancialFormulas.ServiceExtensions;
 using FinancialFormulas.Services;
 
+const string LocalOnlyCorsPolicy = "LocalOnlyCorsPolicy";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +49,27 @@ builder.Services.AddEndpointsApiExplorer();
 // Add Swagger configuration from ServiceExtensions/SwaggerServiceExtensions.cs
 builder.Services.AddConfiguredSwagger();
 
+// Add CORS policy to allow only local requests
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(LocalOnlyCorsPolicy, policy =>
+    {
+        policy
+           .SetIsOriginAllowed(origin =>
+           {
+               if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+               {
+                   return false;
+               }
+
+               return uri.IsLoopback || string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase); 
+               
+           })
+          // .WithOrigins("http://localhost", "http://127.0.0.1")
+          .AllowAnyHeader()
+          .AllowAnyMethod();
+    });
+});
 
 // build web application
 var app = builder.Build();
@@ -56,11 +77,11 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    // Execute develoeprs error page
+    // Execute developers error page
     //app.UseDeveloperExceptionPage();
 
-    // Swager activation can be added here to be enabled 
-    // under development settings. For overal use, set outside
+    // Swagger activation can be added here to be enabled 
+    // under development settings. For overall use, set outside
 }
 
 // Let anyone access swagger for now
@@ -68,7 +89,7 @@ if (app.Environment.IsDevelopment())
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
-    // Disvover versionin within the application
+    // Discover versioning within the application
     var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
 
     // Swagger json file location per version
@@ -77,38 +98,18 @@ app.UseSwaggerUI(options =>
         options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
     }
 
-    // Option 1: setting swagger to appear when accessing the root address
-    // For example: https://localhost:7003/index.html
-    //   Step1: Set inside the Properties/launchSettings.json
-    //           profiles/http/launchUrl = ""
-    //   Step 2: Set here the RoutePrefix parameter to empty
-    //           c.RoutePrefix = string.Empty;
-
-    // Option 2: setting swagger to appear when accessing the address with 
-    //           key word 'swagger'
-    // For example: https://localhost:7003/swagger/index.html
-    //    Step 1: Set inside the Properties/launchSettings.json
-    //            profiles/http/launchUrl = "swagger"
-    //   Step 2: Set here the RoutePrefix parameter to "swagger"
-    //           c.RoutePrefix = c.RoutePrefix = "swagger";
-
     options.RoutePrefix = "swagger"; // Set Swagger UI at app's root
-
-    // Note: in the launchSettings.json, the  profiles/http/launchBrowser = true
-    // configuration point, if you don't want the browser to open
-    // automatically (e.g., for background services or APIs),
-    // you can set launchBrowser to false. This is useful for scenarios
-    // where you don't need a browser interface.
-
 });
 
 // Configure the HTTP request pipeline.
 
 app.UseHttpsRedirection();
 
+// Apply the CORS policy
+app.UseCors(LocalOnlyCorsPolicy);
+
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
-
