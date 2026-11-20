@@ -50,26 +50,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddConfiguredSwagger();
 
 // Add CORS policy to allow only local requests
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(LocalOnlyCorsPolicy, policy =>
-    {
-        policy
-           .SetIsOriginAllowed(origin =>
-           {
-               if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
-               {
-                   return false;
-               }
-
-               return uri.IsLoopback || string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase); 
-               
-           })
-          // .WithOrigins("http://localhost", "http://127.0.0.1")
-          .AllowAnyHeader()
-          .AllowAnyMethod();
-    });
-});
+builder.Services.AddConfiguredCors(LocalOnlyCorsPolicy);
 
 // build web application
 var app = builder.Build();
@@ -86,23 +67,9 @@ if (app.Environment.IsDevelopment())
 
 // Let anyone access swagger for now
 // Swagger activation
-app.UseSwagger();
-app.UseSwaggerUI(options =>
-{
-    // Discover versioning within the application
-    var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-
-    // Swagger json file location per version
-    foreach (var description in provider.ApiVersionDescriptions)
-    {
-        options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
-    }
-
-    options.RoutePrefix = "swagger"; // Set Swagger UI at app's root
-});
+app.UseConfiguredSwagger(app.Services.GetRequiredService<IApiVersionDescriptionProvider>());
 
 // Configure the HTTP request pipeline.
-
 app.UseHttpsRedirection();
 
 // Apply the CORS policy
